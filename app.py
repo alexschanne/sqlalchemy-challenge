@@ -24,6 +24,7 @@ app = Flask(__name__)
 def welcome():
     """List all available api routes."""
     return(
+        f"Aloha! This is the Hawaii Climate Page! Surf's up! <br/>"
         f"Available Routes: <br/>"
         f"Precipitation: /api/v1.0/precipitation<br/>"
         f"List of Stations: /api/v1.0/stations<br/>"
@@ -68,9 +69,9 @@ def stations():
 @app.route("/api/v1.0/tobs")
 def tobs():
     session = Session(engine)
-    latest = session.query(measurement.date).ordery_by(measurement.date.desc()).first()[0]
+    latest = session.query(measurement.date).order_by(measurement.date.desc()).first()[0]
     lastdate = dt.datetime.strptime(latest, '%Y-%m-%d')
-    querydt = dt.date(latest.year - 1, latest.month, latest.day)
+    querydt = dt.date(lastdate.year - 1, lastdate.month, lastdate.day)
     
     queryresult = session.query(measurement.date, measurement.tobs).filter(measurement.date >= querydt).all()
     session.close()
@@ -87,18 +88,21 @@ def tobs():
 @app.route("/api/v1.0/<start>")
 def get_start(start):
     session = Session(engine)
-    queryresult = session.query(func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)).filter(measurement.date >= start).all()
+    
+    startdt = dt.datetime.strptime(start, '%Y-%m-%d')
+
+    queryresult = session.query(func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)).filter(measurement.date >= startdt).all()
     session.close()
 
-    tobsall = []
-    for min, avg, max in queryresult:
+    result_list = []
+    for result in queryresult:
         tobs_dict = {}
-        tobs_dict['Min'] = min
-        tobs_dict['Avg'] = avg
-        tobs_dict['Max'] = max
-        tobsall. append(tobs_dict)
+        tobs_dict['Min'] = result[0]
+        tobs_dict['Avg'] = result[1]
+        tobs_dict['Max'] = result[2]
+        result_list.append(tobs_dict)
 
-    return jsonify(tobsall)
+    return jsonify(result_list)
 
 @app.route('/api/v1.0/<start>/<stop>')
 def start_stop(start,stop):
